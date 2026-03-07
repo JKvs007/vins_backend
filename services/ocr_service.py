@@ -8,6 +8,11 @@ def process_image_for_ocr(image_bytes: bytes) -> str:
     Takes an image in bytes, processes it using OpenCV, runs Tesseract OCR,
     and returns a cleaned valid Indian number plate string if found.
     Regex logic: Validates basic Indian number plate format.
+    Pipeline:
+      - Convert to grayscale
+      - Bilateral filter (denoise while keeping edges)
+      - Otsu threshold
+      - pytesseract with PSM 7 and alphanumeric whitelist
     """
     try:
         # Convert bytes to numpy array
@@ -19,18 +24,25 @@ def process_image_for_ocr(image_bytes: bytes) -> str:
 
         # Grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        
-        # Blur
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
-        
-        # Threshold
-        _, thresh = cv2.threshold(blur, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        
-        # Tesseract configuration for alphanumeric characters
-        custom_config = r'--oem 3 --psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+
+        # Bilateral filter to reduce noise while preserving edges
+        # (good for number plates with sharp character boundaries)
+        filtered = cv2.bilateralFilter(gray, d=11, sigmaColor=17, sigmaSpace=17)
+
+        # Otsu thresholding to binarize the image
+        _, thresh = cv2.threshold(
+            filtered, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+        )
+
+        # Tesseract configuration for single-line plate text with whitelist
+        custom_config = (
+            r'--oem 3 '
+            r'--psm 7 '
+            r'-c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        )
         text = pytesseract.image_to_string(thresh, config=custom_config)
-        
-        # Clean text: uppercase and remove spaces/special chars
+
+        # Clean text: uppercase and keep only alphanumeric characters
         cleaned = re.sub(r'[^A-Z0-9]', '', text.upper())
         
         # Simple regex for Indian number plate (e.g. MH12AB1234)
