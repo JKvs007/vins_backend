@@ -1,5 +1,5 @@
 import time
-from agora_token_builder import RtcTokenBuilder, RoleAttendee
+from agora_token_builder import RtcTokenBuilder
 from core.config import settings
 
 
@@ -13,7 +13,7 @@ def generate_agora_token(channel_name: str, uid: int = 0) -> dict:
         settings.AGORA_APP_CERTIFICATE,
         channel_name,
         uid,
-        RoleAttendee,
+        1,
         privilege_expired_ts
     )
 
