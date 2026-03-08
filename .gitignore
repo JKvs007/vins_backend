@@ -1,6 +1,5 @@
 # Firebase secrets
 *firebase*.json
-!firebase-adminsdk.json
 
 # Environment variables
 .env
