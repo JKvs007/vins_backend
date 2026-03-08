@@ -1,6 +1,6 @@
 # Firebase secrets
-firebase-adminsdk.json
 *firebase*.json
+!firebase-adminsdk.json
 
 # Environment variables
 .env
@@ -12,9 +12,4 @@ venv/
 __pycache__/
 
 # OS files
-.DS_Storefirebase-adminsdk.json
-*firebase*.json
-.env
-venv/
-__pycache__/
 .DS_Store
