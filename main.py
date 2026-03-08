@@ -9,10 +9,10 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Initialize Firebase on startup
-initialize_firebase()
+@app.on_event("startup")
+def startup_event():
+    initialize_firebase()
 
-# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
