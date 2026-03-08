@@ -2,4 +2,3 @@ venv/
 __pycache__/
 .git/
 .env
-firebase-adminsdk.json
