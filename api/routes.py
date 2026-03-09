@@ -4,6 +4,9 @@ from services.ocr_service import process_image_for_ocr
 from services.agora_service import generate_agora_token
 from services.firebase_service import verify_firebase_token
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -13,24 +16,32 @@ async def ocr_plate(file: UploadFile = File(...)):
     """
     Receives an image, processes it to find the number plate string.
     """
+    logger.info(f"OCR request received for file: {file.filename}, content_type: {file.content_type}")
+    
     if not file.content_type or not file.content_type.startswith("image/"):
+        logger.warning(f"Invalid content type: {file.content_type}")
         raise HTTPException(status_code=400, detail="File must be an image.")
 
     try:
         content = await file.read()
+        logger.info(f"Read {len(content)} bytes from file")
 
         if not content:
+            logger.error("Empty file uploaded")
             raise HTTPException(status_code=400, detail="Empty file uploaded.")
 
+        logger.info("Starting OCR processing")
         plate_number = process_image_for_ocr(content)
 
         if plate_number:
+            logger.info(f"OCR successful: '{plate_number}'")
             return OCRResponse(
                 plate_number=plate_number,
                 success=True,
                 error=None
             )
 
+        logger.warning("OCR processing returned no result")
         return OCRResponse(
             plate_number=None,
             success=False,
@@ -40,6 +51,7 @@ async def ocr_plate(file: UploadFile = File(...)):
     except HTTPException:
         raise
     except Exception as e:
+        logger.error(f"OCR processing failed: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
 
 
