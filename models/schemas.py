@@ -15,3 +15,12 @@ class AgoraTokenResponse(BaseModel):
     channel_name: str
     agora_token: str
     app_id: str
+
+class CallNotifyRequest(BaseModel):
+    receiver_uid: str
+    channel_name: str
+    plate_number: str
+
+class CallNotifyResponse(BaseModel):
+    success: bool
+    error: Optional[str] = None

@@ -1,10 +1,12 @@
 from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
-from models.schemas import OCRResponse, AgoraTokenRequest, AgoraTokenResponse
+from models.schemas import OCRResponse, AgoraTokenRequest, AgoraTokenResponse, CallNotifyRequest, CallNotifyResponse
 from services.ocr_service import process_image_for_ocr
 from services.agora_service import generate_agora_token
 from services.firebase_service import verify_firebase_token
 import uuid
 import logging
+import firebase_admin
+from firebase_admin import messaging
 
 logger = logging.getLogger(__name__)
 
@@ -86,4 +88,76 @@ async def get_agora_token(
         raise HTTPException(
             status_code=500,
             detail=f"Agora token generation failed: {str(e)}"
+        )
+
+
+@router.post("/call/notify", response_model=CallNotifyResponse)
+async def notify_call(request: CallNotifyRequest):
+    """
+    Sends FCM notification to receiver for incoming call.
+    """
+    logger.info(f"Call notify request: {request.receiver_uid}, {request.channel_name}")
+    
+    try:
+        # Get receiver's FCM token from Firestore
+        firestore = firebase_admin.firestore.client()
+        user_doc = firestore.collection('users').document(request.receiver_uid).get()
+        
+        if not user_doc.exists:
+            logger.error(f"Receiver user not found: {request.receiver_uid}")
+            return CallNotifyResponse(
+                success=False,
+                error="Receiver user not found"
+            )
+        
+        user_data = user_doc.to_dict()
+        fcm_token = user_data.get('fcm_token')
+        
+        if not fcm_token:
+            logger.error(f"FCM token not found for user: {request.receiver_uid}")
+            return CallNotifyResponse(
+                success=False,
+                error="Receiver FCM token not found"
+            )
+        
+        # Send FCM notification
+        message = messaging.Message(
+            token=fcm_token,
+            data={
+                'type': 'incoming_call',
+                'channelName': request.channel_name,
+                'plateNumber': request.plate_number,
+            },
+            notification=messaging.Notification(
+                title='Incoming Call',
+                body=f'Incoming call from {request.plate_number}',
+            ),
+            android=messaging.AndroidConfig(
+                priority='high',
+                notification=messaging.AndroidNotification(
+                    priority='high',
+                    sound='default',
+                ),
+            ),
+            apns=messaging.APNSConfig(
+                payload=messaging.APNSPayload(
+                    aps=messaging.Aps(
+                        contentAvailable=True,
+                        sound='default',
+                        badge=1,
+                    ),
+                ),
+            ),
+        )
+        
+        response = messaging.send(message)
+        logger.info(f"FCM notification sent: {response}")
+        
+        return CallNotifyResponse(success=True)
+        
+    except Exception as e:
+        logger.error(f"Failed to send FCM notification: {e}", exc_info=True)
+        return CallNotifyResponse(
+            success=False,
+            error=f"Failed to send notification: {str(e)}"
         )
