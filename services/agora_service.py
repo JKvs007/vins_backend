@@ -1,6 +1,6 @@
 import time
 from agora_token_builder import RtcTokenBuilder
-from config import settings
+from core.config import settings
 
 
 def generate_agora_token(channel_name: str, uid: int = 0) -> dict:
