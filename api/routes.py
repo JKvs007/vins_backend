@@ -95,7 +95,7 @@ async def get_agora_token(
 
     try:
         unique_id = uuid.uuid4().hex[:8]
-        channel_name = f"call_{request.caller_uid}_{request.receiver_uid}_{unique_id}"
+        channel_name = f"call_{unique_id}"
 
         token_dict = generate_agora_token(channel_name)
 
